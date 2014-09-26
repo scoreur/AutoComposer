@@ -5,17 +5,17 @@
 #include <cmath>
 #include <algorithm>
 using namespace std;
-double rrand()
+double rrand() //generates random real numbers
 {
     return (double)(random()%1000001)/1000000;
 }
 class hmm
 {
     private:
-        int n,m;
-        double **a,**b,*c;
-        double calc(int *s,int t,double **f,double **g,double *q)
-        {
+        int n,m; //n stands for #hidden states, m stands for #possible outputs
+        double **a,**b,*c; //a, b and c are model parameters, describing the way that the state transits, the outputs are generated and the initial distribution is set
+        double calc(int *s,int t,double **f,double **g,double *q) //calculate parameters used to train the model, everything here is about math, and can be found in any related paper
+        {                                                         //s: the input string, t: the length of s, (f, g, q): temporary arrays
             bool flag=0;
             if(!f||!g||!q)
             {
@@ -61,7 +61,7 @@ class hmm
             return u;
         }
     public:
-        void randomize()
+        void randomize() //initiate the model parameters in random
         {
             srand(time(0));
             for(int i=0;i<n;++i)
@@ -84,8 +84,8 @@ class hmm
             for(int i=0;i<n;++i) {a[i]=new double[n]; b[i]=new double[m];}
             randomize();
         }
-        double adjust(int tot,int **ss,int *len)
-        {
+        double adjust(int tot,int **ss,int *len) //training procedure
+        {                                        //tot: size of training set, ss: strings in training set, len: lengths of strings in ss
             double ***f,***g,*p,***aa,***bb,**cc,**q;
             f=new double**[tot]; g=new double**[tot]; p=new double[tot]; q=new double*[tot];
             aa=new double**[tot]; bb=new double**[tot]; cc=new double*[tot];
@@ -102,7 +102,7 @@ class hmm
                     aa[i][j]=new double[n]; bb[i][j]=new double[m];
                 }
             }
-            #pragma omp parallel for
+            #pragma omp parallel for //parallelize the training via openmp
             for(int i=0;i<tot;++i)
             {
                 p[i]=calc(ss[i],len[i],f[i],g[i],q[i]);
@@ -164,7 +164,7 @@ class hmm
             delete aa; delete bb; delete cc;
             return s;
         }
-        int getinit(int *s,int t)
+        int getinit(int *s,int t) //calculate the most likely state of the model after the output string s, according to current model parameters
         {
             double **f=new double*[t];
             for(int i=0;i<t;++i) f[i]=new double[n];
@@ -180,7 +180,7 @@ class hmm
             for(int i=0;i<t;++i) delete f[i];
             delete f; return x;
         }
-        double conjecture(int *s,int t,int x0)
+        double conjecture(int *s,int t,int x0) //generate the most likely output string s with length t starting from state x0
         {
             double **f=new double*[t];
             int **g=new int*[t];
@@ -210,7 +210,7 @@ class hmm
             }
             return f[t-1][s[t-1]];
         }
-        double evolve(int *s,int t,int x)
+        double evolve(int *s,int t,int x) //generate random output string s with length t starting from state x
         {
             double p=0;
             for(int i=0;i<t;++i)
@@ -243,17 +243,17 @@ class hmm
             for(int i=0;i<n;++i) {delete a[i]; delete b[i];}
             delete a; delete b; delete c;
         }
-        double test(int *s,int len) {return calc(s,len,0,0,0);}
+        double test(int *s,int len) {return calc(s,len,0,0,0);} //almost meaningless, as you can see
 };
 int main()
 {
-    hmm gen(100,14);
-    int n; scanf("%d",&n);
+    hmm gen(100,14); //construct a model with 100 hidden states and 14 possible outputs
+    int n; scanf("%d",&n); //read the length of the input string, which interprets the song used to train the model
     int *s=new int[128];
-    for(int i=0;i<n;++i) scanf("%d",&s[i]);
-    for(int i=0;i<100;++i) gen.adjust(1,&s,&n);
-    gen.evolve(s,32,-1);
-    for(int i=0;i<32;++i)
+    for(int i=0;i<n;++i) scanf("%d",&s[i]); //read the training song
+    for(int i=0;i<100;++i) gen.adjust(1,&s,&n); //repeat the training procedure 100 times
+    gen.evolve(s,32,-1); //generate a random string of length 32 using the trained model, put it into s
+    for(int i=0;i<32;++i) //print the generated string in a single line, seperated by spaces
     {
         if(i) printf(" ");
         printf("%d",s[i]+7);
